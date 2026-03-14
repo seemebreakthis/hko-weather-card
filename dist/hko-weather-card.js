@@ -5,7 +5,7 @@ import {
 
 // #### Add card info to console
 console.info(
-  `%cHKO-WEATHER-CARD\n%cVersion 1.2.2  `,
+  `%cHKO-WEATHER-CARD\n%cVersion 1.2.3  `,
   "color: #043ff6; font-weight: bold; background: white",
   "color: white; font-weight: bold; background: #043ff6"
 );
@@ -1505,7 +1505,7 @@ style() {
       if (this.config.entity_apparent_temp && (root.getElementById("apparent-text") !== null)) try { root.getElementById("apparent-text").textContent = `${this.currentApparent}` } catch(e) {}
       if (this.config.entity_wind_bearing && (root.getElementById("wind-bearing-text") !== null)) try { root.getElementById("wind-bearing-text").textContent = `${this.currentWindBearing}` } catch(e) {}
       if (this.config.entity_wind_speed && (root.getElementById("wind-speed-text") !== null)) try { root.getElementById("wind-speed-text").textContent = ` ${this.currentWindSpeed}` } catch(e) {}
-      if (this.config.entity_wind_gust && (root.getElementById("wind-gust-text") !== null)) try { root.getElementById("wind-gust-next").textContent = ` (Gust ${this.currentWindGust}` } catch(e) {}
+	  if (this.config.entity_wind_gust && (root.getElementById("wind-gust-text") !== null)) try { root.getElementById("wind-gust-text").textContent = `${this.localeText.Gust} ${this.currentWindGust}` } catch(e) {}
       if (this.config.entity_visibility && (root.getElementById("visibility-text") !== null)) try { root.getElementById("visibility-text").textContent = `${this.currentVisibility}` } catch(e) {}
       if (this.config.entity_pop_intensity && !this.config.entity_pop_intensity_rate && (root.getElementById("intensity-text") !== null)) try { root.getElementById("intensity-text").textContent = ` - ${(Number(this._hass.states[this.config.entity_pop_intensity].state)).toLocaleString()}` } catch(e) {}
       if (this.config.entity_pop_intensity_rate && !this.config.entity_pop_intensity && (root.getElementById("intensity-text") !== null)) try { root.getElementById("intensity-text").textContent = ` - ${(Number(this._hass.states[this.config.entity_pop_intensity_rate].state)).toLocaleString()}` } catch(e) {}
@@ -1547,26 +1547,59 @@ style() {
         } catch (e) {}
       }
 
-// WarningInfo
+// WarningInfo (Live Updates)
+
       if (this.config.entity_warnsum) try {
-      var wtcsgnl = this._hass.states[this.config.entity_warnsum].attributes.WTCSGNL;
-      if (root.getElementById("tcws-icon") !== null) try { root.getElementById("tcws-icon").style.backgroundImage = `none, url(${this._hass.hassUrl("/local/community/hko-weather-card/weather_icons/warnsum/" + this.warningIcons[wtcsgnl.code] + this.tcwsStyle + ".svg")})` } catch(e) {}
+        const wtcsgnl = this._hass.states[this.config.entity_warnsum].attributes.WTCSGNL;
+        const tcwsElement = root.getElementById("tcws-icon");
+        if (tcwsElement && wtcsgnl) {
+          // FIX: We use wtcsgnl.code DIRECTLY because it matches your filenames (TC1, TC3, etc.)
+          tcwsElement.style.backgroundImage = `none, url(${this._hass.hassUrl("/local/community/hko-weather-card/weather_icons/warnsum/" + wtcsgnl.code + this.tcwsStyle + ".svg")})`;
+        }
       } catch (e) {}
+
       if (this.config.entity_warninginfo) try {
-      var details = this._hass.states[this.config.entity_warninginfo].attributes.details;
-      if (root.getElementById("warning-0-icon") !== null) try { root.getElementById("warning-0-icon").icon = `${details[0].subtype !== undefined ? this.warningIcons[details[0].subtype] : this.warningIcons[details[0].warningStatementCode]}` } catch(e) {}
-      if (root.getElementById("warning-1-icon") !== null) try { root.getElementById("warning-1-icon").icon = `${details[1].subtype !== undefined ? this.warningIcons[details[1].subtype] : this.warningIcons[details[1].warningStatementCode]}` } catch(e) {}
-      if (root.getElementById("warning-2-icon") !== null) try { root.getElementById("warning-2-icon").icon = `${details[2].subtype !== undefined ? this.warningIcons[details[2].subtype] : this.warningIcons[details[2].warningStatementCode]}` } catch(e) {}
-      if (root.getElementById("warning-3-icon") !== null) try { root.getElementById("warning-3-icon").icon = `${details[3].subtype !== undefined ? this.warningIcons[details[3].subtype] : this.warningIcons[details[3].warningStatementCode]}` } catch(e) {}
-      if (root.getElementById("warning-4-icon") !== null) try { root.getElementById("warning-4-icon").icon = `${details[4].subtype !== undefined ? this.warningIcons[details[4].subtype] : this.warningIcons[details[4].warningStatementCode]}` } catch(e) {}
-      if (root.getElementById("warning-5-icon") !== null) try { root.getElementById("warning-5-icon").icon = `${details[5].subtype !== undefined ? this.warningIcons[details[5].subtype] : this.warningIcons[details[5].warningStatementCode]}` } catch(e) {}
-      if (root.getElementById("warning-0-text") !== null) try { root.getElementById("warning-0-text").textContent = `${details[0].contents}` } catch(e) {}
-      if (root.getElementById("warning-1-text") !== null) try { root.getElementById("warning-1-text").textContent = `${details[1].contents}` } catch(e) {}
-      if (root.getElementById("warning-2-text") !== null) try { root.getElementById("warning-2-text").textContent = `${details[2].contents}` } catch(e) {}
-      if (root.getElementById("warning-3-text") !== null) try { root.getElementById("warning-3-text").textContent = `${details[3].contents}` } catch(e) {}
-      if (root.getElementById("warning-4-text") !== null) try { root.getElementById("warning-4-text").textContent = `${details[4].contents}` } catch(e) {}
-      if (root.getElementById("warning-5-text") !== null) try { root.getElementById("warning-5-text").textContent = `${details[5].contents}` } catch(e) {}
+        const details = this._hass.states[this.config.entity_warninginfo].attributes.details;
+        for (let i = 0; i <= 5; i++) {
+          const containerEl = root.getElementById(`warning-${i}-icon`);
+          const textEl = root.getElementById(`warning-${i}-text`);
+          
+          if (containerEl && details[i]) {
+            const iconCode = details[i].subtype !== undefined ? details[i].subtype : details[i].warningStatementCode;
+            const iconData = this.warningIcons[iconCode];
+            
+            // FIX: Handle the 'Double Agent'. 
+            // If it's a string (TC), just show text. If it's an object (Rain), paint the SVG.
+
+      if (iconData) {
+              if (typeof iconData === 'string') {
+                containerEl.firstElementChild.innerHTML = `<span>${iconData}</span>`;
+              } else if (iconData.strings) {
+                containerEl.firstElementChild.innerHTML = iconData.strings[0];
+              }
+            }
+      
+            if (textEl) textEl.textContent = details[i].contents;
+            containerEl.style.opacity = details[i].contents[0].includes(this.localeText.Cancel) ? "0.4" : "1";
+          }
+        }
       } catch (e) {}
+
+//      if (this.config.entity_warninginfo) try {
+//      var details = this._hass.states[this.config.entity_warninginfo].attributes.details;
+//      if (root.getElementById("warning-0-icon") !== null) try { root.getElementById("warning-0-icon").icon = `${details[0].subtype !== undefined ? this.warningIcons[details[0].subtype] : this.warningIcons[details[0].warningStatementCode]}` } catch(e) {}
+//      if (root.getElementById("warning-1-icon") !== null) try { root.getElementById("warning-1-icon").icon = `${details[1].subtype !== undefined ? this.warningIcons[details[1].subtype] : this.warningIcons[details[1].warningStatementCode]}` } catch(e) {}
+//      if (root.getElementById("warning-2-icon") !== null) try { root.getElementById("warning-2-icon").icon = `${details[2].subtype !== undefined ? this.warningIcons[details[2].subtype] : this.warningIcons[details[2].warningStatementCode]}` } catch(e) {}
+//      if (root.getElementById("warning-3-icon") !== null) try { root.getElementById("warning-3-icon").icon = `${details[3].subtype !== undefined ? this.warningIcons[details[3].subtype] : this.warningIcons[details[3].warningStatementCode]}` } catch(e) {}
+//      if (root.getElementById("warning-4-icon") !== null) try { root.getElementById("warning-4-icon").icon = `${details[4].subtype !== undefined ? this.warningIcons[details[4].subtype] : this.warningIcons[details[4].warningStatementCode]}` } catch(e) {}
+//      if (root.getElementById("warning-5-icon") !== null) try { root.getElementById("warning-5-icon").icon = `${details[5].subtype !== undefined ? this.warningIcons[details[5].subtype] : this.warningIcons[details[5].warningStatementCode]}` } catch(e) {}
+//      if (root.getElementById("warning-0-text") !== null) try { root.getElementById("warning-0-text").textContent = `${details[0].contents}` } catch(e) {}
+//      if (root.getElementById("warning-1-text") !== null) try { root.getElementById("warning-1-text").textContent = `${details[1].contents}` } catch(e) {}
+//      if (root.getElementById("warning-2-text") !== null) try { root.getElementById("warning-2-text").textContent = `${details[2].contents}` } catch(e) {}
+//      if (root.getElementById("warning-3-text") !== null) try { root.getElementById("warning-3-text").textContent = `${details[3].contents}` } catch(e) {}
+//      if (root.getElementById("warning-4-text") !== null) try { root.getElementById("warning-4-text").textContent = `${details[4].contents}` } catch(e) {}
+//      if (root.getElementById("warning-5-text") !== null) try { root.getElementById("warning-5-text").textContent = `${details[5].contents}` } catch(e) {}
+//      } catch (e) {}
     }
   }
 
